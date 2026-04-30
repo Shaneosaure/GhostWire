@@ -16,8 +16,4 @@ updates:
     groups:
       cargo-dependencies:
         patterns:
-<<<<<<< HEAD
           - "*"
-=======
-          - "*"
->>>>>>> 3b95eeb (feat(core): IPC messages + frame length-prefixed JSON)
