@@ -1,0 +1,27 @@
+[package]
+name        = "wgyk-core"
+version.workspace     = true
+edition.workspace     = true
+rust-version.workspace = true
+license.workspace     = true
+
+[dependencies]
+anyhow.workspace             = true
+thiserror.workspace          = true
+tracing.workspace            = true
+secrecy.workspace            = true
+zeroize.workspace            = true
+age.workspace                = true
+age-core.workspace           = true
+yubikey.workspace            = true
+sha2.workspace               = true
+hkdf.workspace               = true
+chacha20poly1305.workspace   = true
+p256.workspace               = true
+serde.workspace              = true
+serde_json.workspace         = true
+base64                       = "0.22"
+ipnet                        = "2"
+
+[features]
+default = []

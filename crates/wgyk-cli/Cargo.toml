@@ -1,0 +1,25 @@
+[package]
+name        = "wgyk-cli"
+version.workspace      = true
+edition.workspace      = true
+rust-version.workspace = true
+license.workspace      = true
+
+[[bin]]
+name = "wgyk"
+path = "src/main.rs"
+
+[dependencies]
+wgyk-core = { path = "../wgyk-core" }
+
+anyhow.workspace             = true
+tracing.workspace            = true
+tracing-subscriber.workspace = true
+secrecy.workspace            = true
+yubikey.workspace            = true
+clap                         = { version = "4", features = ["derive"] }
+rpassword                    = "7"
+ipnet                        = "2"
+wgyk-service = { path = "../wgyk-service" }
+wireguard-nt = { workspace = true }
+winapi.workspace = true

@@ -1,0 +1,23 @@
+[package]
+name        = "wgyk-service"
+version.workspace      = true
+edition.workspace      = true
+rust-version.workspace = true
+license.workspace      = true
+
+[lib]
+name = "wgyk_service"
+path = "src/lib.rs"
+
+[[bin]]
+name = "wgyk-service"
+path = "src/main.rs"
+
+[dependencies]
+wgyk-core    = { path = "../wgyk-core" }
+anyhow.workspace   = true
+tracing.workspace  = true
+secrecy.workspace  = true
+ipnet              = "2"
+wireguard-nt = { workspace = true }
+winapi.workspace   = true

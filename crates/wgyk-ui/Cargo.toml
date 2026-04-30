@@ -1,0 +1,14 @@
+[package]
+name        = "wgyk-ui"
+version.workspace      = true
+edition.workspace      = true
+rust-version.workspace = true
+license.workspace      = true
+
+[[bin]]
+name = "wgyk-ui"
+path = "src/main.rs"
+
+[dependencies]
+wgyk-core = { path = "../wgyk-core" }
+anyhow.workspace = true

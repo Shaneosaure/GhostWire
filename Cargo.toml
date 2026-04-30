@@ -1,0 +1,78 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/wgyk-core",
+    "crates/wgyk-service",
+    "crates/wgyk-ui",
+    "crates/wgyk-cli",
+]
+
+[workspace.package]
+version      = "0.1.0"
+edition      = "2021"
+rust-version = "1.78"
+license      = "GPL-3.0-or-later"
+authors      = ["Shane"]
+repository   = "https://github.com/Shaneosaure/GhostWire"
+
+# Dépendances déclarées une seule fois ici, héritées par chaque crate.
+[workspace.dependencies]
+# --- Diagnostics ---
+anyhow             = "1"
+thiserror          = "1"
+tracing            = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# --- Mémoire sensible ---
+secrecy  = "0.8"
+zeroize  = { version = "1", features = ["zeroize_derive"] }
+
+# --- Cryptographie ---
+age                  = { version = "0.10", default-features = false, features = ["armor"] }
+age-core             = "0.10"
+yubikey              = { version = "0.8", features = ["untested"] }
+sha2                 = "0.10"
+hkdf                 = "0.12"
+chacha20poly1305     = "0.10"
+p256                 = { version = "0.13", features = ["ecdh"] }
+x25519-dalek         = { version = "2", features = ["static_secrets"] }
+
+# --- Async / IPC / sérialisation ---
+tokio       = { version = "1", features = ["rt-multi-thread", "macros", "net", "io-util", "sync", "signal"] }
+serde       = { version = "1", features = ["derive"] }
+serde_json  = "1"
+bytes       = "1"
+
+# --- Windows ---
+windows = { version = "0.58", features = [
+    "Win32_Foundation",
+    "Win32_Security",
+    "Win32_Security_Authorization",
+    "Win32_System_Pipes",
+    "Win32_System_Services",
+    "Win32_Storage_FileSystem",
+    "Win32_System_IO",
+] }
+windows-service = "0.7"
+
+# --- Tunnel ---
+# wireguard-nt fait *tout* le WireGuard en kernel (préféré).
+# wintun ne fournit que l'adaptateur réseau ; il faudrait alors implémenter
+# le protocole en userspace (boringtun-rs). Voir notes en fin.
+wireguard-nt = "0.5"
+winapi = { version = "0.3", features = ["winerror", "winsock2", "ws2def"] }
+
+# --- UI ---
+tray-icon = "0.19"
+eframe    = { version = "0.29", default-features = false, features = ["default_fonts", "wgpu"] }
+egui      = "0.29"
+
+[profile.release]
+lto              = "thin"
+codegen-units    = 1
+strip            = "symbols"
+panic            = "abort"
+opt-level        = 3
+
+[profile.dev]
+opt-level = 1   # accélère age et chacha en dev sans tuer la compilation

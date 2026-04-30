@@ -1,0 +1,69 @@
+# ============================================================
+#  Rust / Cargo
+# ============================================================
+/target/
+**/target/
+*.pdb
+
+# Cargo.lock : on le COMMIT (projet avec binaires).
+# On ne le mettrait pas pour une lib pure.
+# !Cargo.lock
+
+# ============================================================
+#  Secrets et fixtures cryptographiques
+# ============================================================
+# Configurations WireGuard chiffrées : même chiffrées, elles révèlent qui
+# peut décrypter (recipient pubkey) et leur structure.
+*.age
+*.conf.age
+!tests/fixtures/.gitkeep
+
+# Identités age-plugin-yubikey : ne contiennent PAS la clé privée (qui reste
+# sur la YubiKey), mais identifient le matériel et la slot utilisée.
+*identity*.txt
+age-yubikey-identity-*.txt
+age-identity-*.txt
+
+# Clés WireGuard en clair (au cas où on en génère pour tests)
+*.privkey
+*.pubkey
+*.psk
+wg-*.key
+
+# Variables d'environnement de test (peuvent contenir des PINs)
+.env
+.env.*
+!.env.example
+
+# ============================================================
+#  IDE / éditeurs
+# ============================================================
+/.vscode/
+/.idea/
+*.iml
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# ============================================================
+#  Windows
+# ============================================================
+*.exe.stackdump
+*.lnk
+desktop.ini
+
+# ============================================================
+#  Logs et runtime
+# ============================================================
+*.log
+/logs/
+*.dmp
+
+# ============================================================
+#  Outputs locaux à ne pas commit
+# ============================================================
+/scratch/
+/tmp/
+/.cargo/  # config locale .cargo/config.toml peut contenir des credentials
