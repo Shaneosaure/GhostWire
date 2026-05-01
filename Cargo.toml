@@ -19,20 +19,20 @@ repository   = "https://github.com/Shaneosaure/GhostWire"
 [workspace.dependencies]
 # --- Diagnostics ---
 anyhow             = "1"
-thiserror          = "1"
+thiserror          = "2"
 tracing            = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 
 # --- Mémoire sensible ---
-secrecy  = "0.8"
+secrecy  = "0.10"
 zeroize  = { version = "1", features = ["zeroize_derive"] }
 
 # --- Cryptographie ---
-age                  = { version = "0.10", default-features = false, features = ["armor"] }
-age-core             = "0.10"
+age                  = { version = "0.11", default-features = false, features = ["armor"] }
+age-core             = "0.11"
 yubikey              = { version = "0.8", features = ["untested"] }
-sha2                 = "0.10"
-hkdf                 = "0.12"
+sha2                 = "0.11"
+hkdf                 = "0.13"
 chacha20poly1305     = "0.10"
 p256                 = { version = "0.13", features = ["ecdh"] }
 x25519-dalek         = { version = "2", features = ["static_secrets"] }
@@ -44,7 +44,7 @@ serde_json  = "1"
 bytes       = "1"
 
 # --- Windows ---
-windows = { version = "0.58", features = [
+windows = { version = "0.62", features = [
     "Win32_Foundation",
     "Win32_Security",
     "Win32_Security_Authorization",
@@ -56,7 +56,7 @@ windows = { version = "0.58", features = [
     "Win32_UI_WindowsAndMessaging",
     "Win32_Graphics_Gdi",           # ← pour SetLayeredWindowAttributes
 ] }
-windows-service = "0.7"
+windows-service = "0.8"
 
 # --- Tunnel ---
 # wireguard-nt fait *tout* le WireGuard en kernel (préféré).
@@ -66,9 +66,9 @@ wireguard-nt = "0.5"
 winapi = { version = "0.3", features = ["winerror", "winsock2", "ws2def"] }
 
 # --- UI ---
-tray-icon = "0.19"
-eframe = { version = "0.29", default-features = false, features = ["default_fonts", "glow"] }
-egui      = "0.29"
+tray-icon = "0.23"
+eframe = { version = "0.34", default-features = false, features = ["default_fonts", "glow"] }
+egui      = "0.34"
 
 [profile.release]
 lto              = "thin"
