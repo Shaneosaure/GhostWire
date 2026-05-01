@@ -175,31 +175,61 @@ fn parse_slot(slot: &str) -> anyhow::Result<yubikey::piv::SlotId> {
         other => anyhow::bail!("slot inconnue : '{other}'"),
     })
 }
-
 fn create_pipe_instance() -> Result<std::fs::File> {
     use std::os::windows::io::FromRawHandle;
     use windows::core::PCSTR;
     use windows::Win32::Storage::FileSystem::*;
     use windows::Win32::System::Pipes::*;
+    use windows::Win32::Security::*;
+
+    // SDDL : "D:(A;;GRGW;;;WD)" = Allow (Generic Read + Generic Write) to Everyone.
+    // "WD" = World (Everyone) — suffisant pour un pipe local.
+    // En production on affinerait à "BU" (BUILTIN\Users) mais ça nécessite
+    // ConvertStringSecurityDescriptorToSecurityDescriptor qui est plus verbeux.
+    let sddl = "D:(A;;GRGW;;;WD)\0";
+
+    let mut sd = PSECURITY_DESCRIPTOR::default();
+    let mut acl_size: u32 = 0;
+
+    unsafe {
+        windows::Win32::Security::Authorization::ConvertStringSecurityDescriptorToSecurityDescriptorA(
+            PCSTR(sddl.as_ptr()),
+            windows::Win32::Security::Authorization::SDDL_REVISION_1,
+            &mut sd,
+            Some(&mut acl_size),
+        )
+    }.context("ConvertStringSecurityDescriptorToSecurityDescriptorA échoué")?;
+
+    let mut sa = SECURITY_ATTRIBUTES {
+        nLength: std::mem::size_of::<SECURITY_ATTRIBUTES>() as u32,
+        lpSecurityDescriptor: sd.0,
+        bInheritHandle: false.into(),
+    };
 
     let pipe_name = format!("{PIPE_NAME}\0");
 
-    // DACL : seul le groupe BUILTIN\Users peut se connecter.
-    // Pour l'instant on ouvre sans DACL explicite (à renforcer à l'étape 3d).
     let handle = unsafe {
         CreateNamedPipeA(
             PCSTR(pipe_name.as_ptr()),
-            PIPE_ACCESS_DUPLEX | FILE_FLAG_OVERLAPPED,
+            PIPE_ACCESS_DUPLEX,
             PIPE_TYPE_MESSAGE | PIPE_READMODE_MESSAGE | PIPE_WAIT,
             PIPE_UNLIMITED_INSTANCES,
             65536,
             65536,
             0,
-            None,
+            Some(&mut sa),
         )
     }.context("CreateNamedPipe échoué")?;
 
-    // Attend qu'un client se connecte.
+    // Libère le security descriptor via HeapFree (LocalFree n'existe pas en windows 0.58).
+    unsafe {
+        windows::Win32::System::Memory::HeapFree(
+            windows::Win32::System::Memory::GetProcessHeap().unwrap(),
+            windows::Win32::System::Memory::HEAP_FLAGS(0),
+            Some(sd.0),
+        )
+    }.ok();
+
     unsafe { ConnectNamedPipe(handle, None) }
         .context("ConnectNamedPipe échoué")?;
 

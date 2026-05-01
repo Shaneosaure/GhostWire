@@ -47,9 +47,10 @@ bytes       = "1"
 windows = { version = "0.58", features = [
     "Win32_Foundation",
     "Win32_Security",
-    "Win32_Security_Authorization",
+    "Win32_Security_Authorization",    # ← nécessaire pour ConvertString...
     "Win32_System_Pipes",
     "Win32_System_Services",
+    "Win32_System_Memory",             # ← nécessaire pour LocalFree
     "Win32_Storage_FileSystem",
     "Win32_System_IO",
 ] }

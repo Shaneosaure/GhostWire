@@ -115,16 +115,30 @@ fn build_set_peer(p: &wgyk_core::config::PeerConfig) -> Result<SetPeer> {
 }
 
 fn find_wireguard_dll() -> Result<PathBuf> {
+    // 1. À côté du binaire en cours d'exécution (production + service SYSTEM).
     if let Ok(exe) = std::env::current_exe() {
         let candidate = exe.with_file_name("wireguard.dll");
         if candidate.exists() {
             return Ok(candidate);
         }
     }
+
+    // 2. assets/wireguard-nt/ relatif au CWD (développement depuis CLI).
     let dev = PathBuf::from("assets/wireguard-nt/wireguard.dll");
     if dev.exists() {
         return Ok(dev);
     }
+
+    // 3. Même dossier que le binaire + sous-dossier wireguard-nt (layout release).
+    if let Ok(exe) = std::env::current_exe() {
+        let candidate = exe.parent()
+            .map(|p| p.join("wireguard-nt").join("wireguard.dll"))
+            .unwrap_or_default();
+        if candidate.exists() {
+            return Ok(candidate);
+        }
+    }
+
     Err(anyhow!(
         "wireguard.dll introuvable — \
          place-la à côté du binaire ou dans assets/wireguard-nt/"
