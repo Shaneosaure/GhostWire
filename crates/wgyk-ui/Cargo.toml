@@ -9,12 +9,6 @@ license.workspace      = true
 name = "wgyk-ui"
 path = "src/main.rs"
 
-# Empêche l'ouverture d'une console au lancement.
-# Le binaire sera "windows subsystem", pas "console".
-[package.metadata.winres]
-ProductName = "GhostWire"
-FileDescription = "GhostWire VPN tray client"
-
 [dependencies]
 wgyk-core = { path = "../wgyk-core" }
 
@@ -25,15 +19,13 @@ secrecy.workspace            = true
 
 # UI
 tray-icon = { workspace = true }
-eframe    = { workspace = true }
+eframe = { version = "0.29", default-features = false, features = ["default_fonts", "glow"] }
 egui      = { workspace = true }
-
-# Pour gérer la fenêtre PIN qui apparaît à la demande
-winit     = "0.30"
+windows = { workspace = true }
 
 # IPC
 serde.workspace      = true
 serde_json.workspace = true
 
-# Choix d'un fichier de config
+# Choix d'un fichier .conf.age
 rfd       = "0.15"
