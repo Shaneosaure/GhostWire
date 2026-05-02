@@ -10,8 +10,13 @@ use std::io::{Read, Write};
 use anyhow::{anyhow, Context, Result};
 use serde::{de::DeserializeOwned, Serialize};
 
-/// Longueur maximale d'un message (1 MiB — largement suffisant).
-const MAX_FRAME_SIZE: u32 = 1024 * 1024;
+/// Longueur maximale d'un message.
+///
+/// Nos messages réels font < 2 KiB (le plus gros est `Connect` avec un path
+/// Windows long, ou `Status` avec plusieurs tunnels). 64 KiB laisse 30× de
+/// marge — assez pour absorber l'évolution future du protocole, pas assez
+/// pour permettre une attaque par allocation excessive.
+const MAX_FRAME_SIZE: u32 = 64 * 1024;
 
 /// Écrit un message sérialisé en JSON sur `writer`.
 pub fn write_message<W: Write, T: Serialize>(writer: &mut W, msg: &T) -> Result<()> {

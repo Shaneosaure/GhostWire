@@ -133,7 +133,7 @@ pub fn run(tunnels: TunnelMap) -> Result<()> {
             drop(pipe);
             // Petite pause pour éviter une boucle hot si un attaquant
             // martèle le pipe.
-            std::thread::sleep(Duration::from_millis(100));
+            std::thread::sleep(Duration::from_millis(10));
             continue;
         }
 
