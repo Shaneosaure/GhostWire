@@ -61,3 +61,12 @@ pub fn connect(config_path: &str, slot: &str, pin: String) -> Result<(String, St
         other => anyhow::bail!("réponse inattendue : {other:?}"),
     }
 }
+
+/// Récupère le status des tunnels actifs.
+pub fn status() -> Result<Vec<wgyk_core::ipc::messages::TunnelStatus>> {
+    match call(Request::Status)? {
+        Response::Status { tunnels } => Ok(tunnels),
+        Response::Error { message } => anyhow::bail!("{message}"),
+        other => anyhow::bail!("réponse inattendue : {other:?}"),
+    }
+}

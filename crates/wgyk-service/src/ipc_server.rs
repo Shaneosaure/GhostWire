@@ -58,15 +58,17 @@ fn handle_client(
 fn handle_request(request: Request, tunnels: &TunnelMap) -> Response {
     match request {
         Request::Ping => Response::Pong,
-
         Request::Status => {
             let map = tunnels.lock().unwrap();
-            let list = map
+            // Pour chaque tunnel actif, retourne ses infos.
+            // Pour le PoC, on a un seul tunnel "GhostWire" max,
+            // donc on retourne juste sa présence.
+            let list: Vec<TunnelStatus> = map
                 .keys()
                 .map(|name| TunnelStatus {
                     interface: name.clone(),
-                    address: String::new(),
-                    peer_endpoint: String::new(),
+                    address: String::new(),       // Sera enrichi plus tard
+                    peer_endpoint: String::new(), // idem
                     connected: true,
                 })
                 .collect();

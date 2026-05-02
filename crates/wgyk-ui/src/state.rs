@@ -1,4 +1,4 @@
-//! État partagé entre le tray et les fenêtres egui.
+//! État partagé entre threads (IPC + UI).
 
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
@@ -8,16 +8,6 @@ pub enum TunnelState {
     Disconnected,
     Connecting,
     Connected,
-}
-
-impl TunnelState {
-    pub fn label(self) -> &'static str {
-        match self {
-            TunnelState::Disconnected => "Disconnected",
-            TunnelState::Connecting   => "Connecting…",
-            TunnelState::Connected    => "Connected",
-        }
-    }
 }
 
 #[derive(Debug, Clone)]
@@ -33,16 +23,8 @@ pub struct UiState {
     pub last_error: Option<String>,
     pub config_path: Option<PathBuf>,
     pub tunnel_info: Option<TunnelInfo>,
-    /// Action demandée par le tray, à traiter au prochain frame egui.
-    pub pending_action: Option<PendingAction>,
-}
-
-#[derive(Debug, Clone)]
-pub enum PendingAction {
-    /// Affiche la fenêtre principale.
-    ShowWindow,
-    /// Quitte complètement l'application.
-    Quit,
+    /// Quand true, on ferme l'app dès que la déconnexion est confirmée.
+    pub quit_after_disconnect: bool,
 }
 
 impl UiState {
@@ -52,7 +34,7 @@ impl UiState {
             last_error: None,
             config_path: None,
             tunnel_info: None,
-            pending_action: None,
+            quit_after_disconnect: false,
         }
     }
 }
