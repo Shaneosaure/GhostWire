@@ -1,0 +1,55 @@
+name: "CodeQL Advanced"
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+  schedule:
+    - cron: '17 17 * * 1' # Tourne une fois par semaine
+
+jobs:
+  analyze:
+    name: Analyze (${{ matrix.language }})
+    # 🚨 CHANGEMENT CRITIQUE 1 : On force l'exécution sur Windows
+    runs-on: windows-latest 
+    permissions:
+      security-events: write
+      packages: read
+      actions: read
+      contents: read
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+        - language: actions
+          build-mode: none
+        - language: rust
+          # 🚨 CHANGEMENT CRITIQUE 2 : On dit à CodeQL qu'on va compiler nous-mêmes
+          build-mode: manual 
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Initialize CodeQL
+      uses: github/codeql-action/init@v4
+      with:
+        languages: ${{ matrix.language }}
+        build-mode: ${{ matrix.build-mode }}
+        # Optionnel : Ajoute des règles de sécurité plus strictes
+        queries: security-extended,security-and-quality
+
+    # 🚨 CHANGEMENT CRITIQUE 3 : La commande de build pour Rust
+    - name: Run manual build steps
+      if: matrix.build-mode == 'manual'
+      shell: bash
+      run: |
+        echo "Compilation de GhostWire pour l'analyse CodeQL..."
+        cargo build --workspace
+        
+    - name: Perform CodeQL Analysis
+      uses: github/codeql-action/analyze@v4
+      with:
+        category: "/language:${{matrix.language}}"
