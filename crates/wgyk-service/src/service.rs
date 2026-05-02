@@ -35,17 +35,22 @@ fn service_main(_args: Vec<OsString>) {
 }
 
 fn run_service() -> Result<()> {
+    use std::sync::mpsc;
+
     let tunnels = new_tunnel_map();
     let tunnels_for_handler = tunnels.clone();
 
-    // Enregistre le handler de contrôle SCM (stop, pause, etc.)
+    // Canal pour signaler l'arrêt depuis le handler SCM vers la boucle principale.
+    let (shutdown_tx, shutdown_rx) = mpsc::channel::<()>();
+
     let event_handler = move |control| -> ServiceControlHandlerResult {
         match control {
             ServiceControl::Stop => {
                 tracing::info!("SCM → Stop reçu");
-                // Coupe tous les tunnels actifs.
-                let mut map = tunnels_for_handler.lock().unwrap();
-                map.clear(); // Drop de chaque Tunnel → nettoyage kernel
+                // Coupe tous les tunnels actifs (Drop nettoie le kernel).
+                tunnels_for_handler.lock().unwrap().clear();
+                // Signale à la boucle principale qu'il faut sortir.
+                let _ = shutdown_tx.send(());
                 ServiceControlHandlerResult::NoError
             }
             ServiceControl::Interrogate => ServiceControlHandlerResult::NoError,
@@ -56,7 +61,6 @@ fn run_service() -> Result<()> {
     let status_handle = service_control_handler::register(SERVICE_NAME, event_handler)
         .context("enregistrement handler SCM échoué")?;
 
-    // Signale au SCM que le service est en cours de démarrage.
     status_handle.set_service_status(ServiceStatus {
         service_type: ServiceType::OWN_PROCESS,
         current_state: ServiceState::StartPending,
@@ -75,7 +79,6 @@ fn run_service() -> Result<()> {
         }
     });
 
-    // Signale que le service est opérationnel.
     status_handle.set_service_status(ServiceStatus {
         service_type: ServiceType::OWN_PROCESS,
         current_state: ServiceState::Running,
@@ -88,10 +91,24 @@ fn run_service() -> Result<()> {
 
     tracing::info!("service GhostWire démarré ✓");
 
-    // Boucle principale — attend l'arrêt via SCM.
-    loop {
-        std::thread::sleep(Duration::from_secs(1));
-    }
+    // Boucle principale : attend le signal d'arrêt SCM.
+    // recv() bloque jusqu'à ce que le handler envoie sur le canal.
+    let _ = shutdown_rx.recv();
+
+    tracing::info!("arrêt du service en cours…");
+
+    // Signale au SCM que le service s'arrête proprement.
+    status_handle.set_service_status(ServiceStatus {
+        service_type: ServiceType::OWN_PROCESS,
+        current_state: ServiceState::Stopped,
+        controls_accepted: ServiceControlAccept::empty(),
+        exit_code: ServiceExitCode::Win32(0),
+        checkpoint: 0,
+        wait_hint: Duration::from_secs(0),
+        process_id: None,
+    })?;
+
+    Ok(())
 }
 
 /// Installe le service dans le SCM Windows. Nécessite admin.

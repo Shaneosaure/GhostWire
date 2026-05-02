@@ -1,0 +1,14 @@
+[package]
+name        = "ghostwire-installer"
+version.workspace      = true
+edition.workspace      = true
+rust-version.workspace = true
+license.workspace      = true
+authors.workspace = true
+description = "GhostWire VPN client installer for Windows"
+
+[[bin]]
+name = "ghostwire-installer"
+path = "src/main.rs"
+
+[dependencies]

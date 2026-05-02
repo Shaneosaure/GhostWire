@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  GhostWire MSI installer (WiX v4+ syntax).
+
+  Build :
+    wix build -arch x64 `
+        -ext WixToolset.UI.wixext `
+        -ext WixToolset.Util.wixext `
+        -o ..\..\..\target\wix\GhostWire-0.1.0-x64.msi `
+        main.wxs
+-->
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs"
+     xmlns:ui="http://wixtoolset.org/schemas/v4/wxs/ui"
+     xmlns:util="http://wixtoolset.org/schemas/v4/wxs/util">
+
+  <Package
+      Name="GhostWire"
+      Manufacturer="Shane"
+      Version="0.1.0"
+      UpgradeCode="177BB24E-1F8B-4C94-A2A2-8E1356849C5F"
+      Scope="perMachine">
+
+    <SummaryInformation
+        Description="GhostWire — WireGuard VPN client with YubiKey"
+        Manufacturer="Shane" />
+
+    <MediaTemplate EmbedCab="yes" />
+
+    <!-- UI : utilise WixUI_Minimal (welcome + done) -->
+    <ui:WixUI Id="WixUI_Minimal" />
+
+    <!-- ── Dossiers ────────────────────────────────────────── -->
+    <StandardDirectory Id="ProgramFiles64Folder">
+      <Directory Id="INSTALLFOLDER" Name="GhostWire" />
+    </StandardDirectory>
+
+    <StandardDirectory Id="ProgramMenuFolder">
+      <Directory Id="ApplicationProgramsFolder" Name="GhostWire" />
+    </StandardDirectory>
+
+    <!-- ── Composants : binaires + DLL ─────────────────────── -->
+    <Component Id="UiBinary" Directory="INSTALLFOLDER" Bitness="always64">
+      <File Id="wgyk_ui_exe" Source="..\..\..\target\release\wgyk-ui.exe" KeyPath="yes" />
+    </Component>
+
+    <Component Id="CliBinary" Directory="INSTALLFOLDER" Bitness="always64">
+      <File Source="..\..\..\target\release\wgyk.exe" />
+    </Component>
+
+    <Component Id="WireguardDll" Directory="INSTALLFOLDER" Bitness="always64">
+      <File Source="..\..\..\assets\wireguard-nt\wireguard.dll" />
+    </Component>
+
+    <!-- Composant service : binaire + installation/démarrage SCM -->
+    <Component Id="ServiceBinary" Directory="INSTALLFOLDER" Bitness="always64">
+      <File Id="wgyk_service_exe"
+            Source="..\..\..\target\release\wgyk-service.exe"
+            KeyPath="yes" />
+
+      <ServiceInstall
+          Id="GhostWireServiceInstall"
+          Name="GhostWireService"
+          DisplayName="GhostWire VPN Service"
+          Description="Gère les tunnels WireGuard de GhostWire."
+          Type="ownProcess"
+          Start="auto"
+          ErrorControl="normal"
+          Account="LocalSystem"
+          Vital="yes"
+          Arguments="run" />
+
+      <ServiceControl
+          Id="GhostWireServiceControl"
+          Name="GhostWireService"
+          Start="install"
+          Stop="both"
+          Remove="uninstall"
+          Wait="yes" />
+    </Component>
+
+    <!-- ── Raccourci menu Démarrer ────────────────────────── -->
+    <Component Id="StartMenuShortcut" Directory="ApplicationProgramsFolder" Guid="A8B5D1F0-3C7E-4B92-9A4D-1F8E2C5B6A37">
+      <Shortcut
+          Id="GhostWireShortcut"
+          Name="GhostWire"
+          Description="GhostWire VPN client"
+          Target="[INSTALLFOLDER]wgyk-ui.exe"
+          WorkingDirectory="INSTALLFOLDER" />
+      <RemoveFolder Id="RemoveAppMenuFolder" On="uninstall" />
+      <RegistryValue
+          Root="HKCU"
+          Key="Software\GhostWire"
+          Name="installed"
+          Type="integer"
+          Value="1"
+          KeyPath="yes" />
+    </Component>
+
+    <!-- ── Feature qui regroupe tout ──────────────────────── -->
+    <Feature Id="Main" Title="GhostWire" Level="1">
+      <ComponentRef Id="UiBinary" />
+      <ComponentRef Id="CliBinary" />
+      <ComponentRef Id="ServiceBinary" />
+      <ComponentRef Id="WireguardDll" />
+      <ComponentRef Id="StartMenuShortcut" />
+    </Feature>
+
+  </Package>
+</Wix>

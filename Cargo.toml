@@ -5,6 +5,7 @@ members = [
     "crates/wgyk-service",
     "crates/wgyk-ui",
     "crates/wgyk-cli",
+    "crates/ghostwire-installer",
 ]
 
 [workspace.package]
@@ -12,7 +13,7 @@ version      = "0.1.0"
 edition      = "2021"
 rust-version = "1.78"
 license      = "GPL-3.0-or-later"
-authors      = ["Shane"]
+authors     = ["Shane <shane@shaneosau.re>"]
 repository   = "https://github.com/Shaneosaure/GhostWire"
 
 # Dépendances déclarées une seule fois ici, héritées par chaque crate.
