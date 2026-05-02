@@ -1,0 +1,123 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build-msi:
+    runs-on: windows-latest
+    permissions:
+      contents: write   # nécessaire pour créer la release
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-pc-windows-msvc
+
+      - name: Setup Rust cache
+        uses: Swatinem/rust-cache@v2
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Install WiX v7
+        shell: pwsh
+        run: |
+          dotnet tool install --global wix
+          wix eula accept wix7
+          wix extension add WixToolset.UI.wixext/7.0.0
+          wix extension add WixToolset.Util.wixext/7.0.0
+
+      - name: Download wireguard.dll
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path assets\wireguard-nt
+          Invoke-WebRequest `
+            -Uri "https://download.wireguard.com/wireguard-nt/wireguard-nt-1.0.zip" `
+            -OutFile wireguard-nt.zip
+          Expand-Archive -Path wireguard-nt.zip -DestinationPath wireguard-nt-extracted
+          Copy-Item wireguard-nt-extracted\wireguard-nt\bin\amd64\wireguard.dll `
+                    assets\wireguard-nt\wireguard.dll
+
+      - name: Get version from tag
+        id: version
+        shell: pwsh
+        run: |
+          $tag = "${{ github.ref_name }}"
+          $version = $tag -replace '^v', ''
+          "version=$version" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+          echo "Building version: $version"
+
+      - name: Build workspace (release)
+        run: cargo build --release --workspace
+
+      - name: Copy wireguard.dll for tests
+        shell: pwsh
+        run: Copy-Item assets\wireguard-nt\wireguard.dll target\release\wireguard.dll
+
+      - name: Build MSI
+        shell: pwsh
+        run: |
+          cd crates\ghostwire-installer\wix
+          New-Item -ItemType Directory -Force -Path ..\..\..\target\wix
+          wix build -arch x64 `
+            -ext WixToolset.UI.wixext `
+            -ext WixToolset.Util.wixext `
+            -o ..\..\..\target\wix\GhostWire-${{ steps.version.outputs.version }}-x64.msi `
+            main.wxs
+
+      - name: Compute MSI checksum
+        shell: pwsh
+        run: |
+          $hash = Get-FileHash target\wix\GhostWire-${{ steps.version.outputs.version }}-x64.msi -Algorithm SHA256
+          "SHA256: $($hash.Hash)" | Out-File -FilePath target\wix\GhostWire-${{ steps.version.outputs.version }}-x64.msi.sha256
+          echo "SHA256: $($hash.Hash)"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: GhostWire ${{ github.ref_name }}
+          generate_release_notes: true
+          files: |
+            target/wix/GhostWire-${{ steps.version.outputs.version }}-x64.msi
+            target/wix/GhostWire-${{ steps.version.outputs.version }}-x64.msi.sha256
+          body: |
+            ## GhostWire ${{ github.ref_name }}
+
+            Native Rust WireGuard VPN client for Windows with YubiKey-protected configuration.
+
+            ### Installation
+
+            Download `GhostWire-${{ steps.version.outputs.version }}-x64.msi` below and double-click to install.
+            Windows SmartScreen will warn that the installer is unsigned — click **More info** then **Run anyway**.
+
+            Once installed, search for "GhostWire" in the Start menu.
+
+            ### Verify integrity
+
+```powershell
+            Get-FileHash GhostWire-${{ steps.version.outputs.version }}-x64.msi -Algorithm SHA256
+```
+
+            Compare with the value in `GhostWire-${{ steps.version.outputs.version }}-x64.msi.sha256`.
+
+            ### Requirements
+
+            - Windows 10/11 x64
+            - YubiKey 5 series with PIV support
+            - An `age` identity provisioned on your YubiKey (see [README](https://github.com/Shaneosaure/GhostWire#readme) for setup)
+
+            ### Known limitations
+
+            - Installer is not yet code-signed (SmartScreen warning)
+            - No application icon yet
+
+            See [README](https://github.com/Shaneosaure/GhostWire#readme) for full documentation and the changelog.

@@ -4,7 +4,7 @@
 > on a YubiKey — and never on your disk.
 
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
-[![Status: Beta](https://img.shields.io/badge/status-beta-yellow)](#status)
+[![Release: v0.1.0](https://img.shields.io/badge/release-v0.1.0-brightgreen)](#status)
 
 GhostWire is an open-source Windows VPN client that bridges three things
 that should have always belonged together: the **WireGuard kernel driver**
@@ -48,10 +48,10 @@ GhostWire is built around three non-negotiable rules:
 
 ## Status
 
-**Production-ready VPN client with full GUI.** A real WireGuard tunnel
-can be established, hardware-authenticated, with handshake and
-encrypted traffic flowing — all from a native Rust application with
-no external dependencies at runtime.
+**v0.1.0 — first functional release.** A real WireGuard tunnel can be
+established, hardware-authenticated, with handshake and encrypted
+traffic flowing — all from a native Rust application packaged as a
+single MSI installer. No external runtime dependencies.
 
 What's implemented today:
 
@@ -63,7 +63,8 @@ What's implemented today:
   tunnel: handshake, routing, MTU, IP assignment all configured via the
   native API.
 - ✅ **Windows service** (`wgyk-service`) running as `SYSTEM`, managing
-  tunnel lifecycle independently of the UI.
+  tunnel lifecycle independently of the UI, with proper SCM signal
+  handling for graceful shutdown.
 - ✅ **Named-pipe IPC** between UI and service with DACL restricting
   access to local users.
 - ✅ **Native GUI** (`wgyk-ui`) with `egui`/`eframe` showing tunnel
@@ -75,14 +76,18 @@ What's implemented today:
   (e.g. left running between sessions) and shows it as connected.
 - ✅ **Graceful shutdown** — closing the window with an active tunnel
   prompts to disconnect, keep alive in background, or cancel.
+- ✅ **MSI installer** (WiX v7) with automatic service registration,
+  Start menu shortcut, and clean uninstall.
 - ✅ **Diagnostic CLI** (`wgyk`) with `probe`, `decrypt`, `inspect`,
   `connect`, and service-control subcommands.
 
-What's not yet implemented (planned, in this order):
+Planned for future releases:
 
-1. WiX installer (MSI) that registers the service.
-2. Auto-update mechanism for the application.
-3. Multiple-config management with quick switching from the UI.
+1. Code signing (Authenticode) of the MSI to remove SmartScreen warnings.
+2. Custom EULA in the installer (currently shows placeholder text).
+3. Application icon (`.ico`) for the executable and Add/Remove Programs.
+4. Auto-update mechanism for the application.
+5. Multiple-config management with quick switching from the UI.
 
 ## How it works (cryptographic pipeline)
 
@@ -162,14 +167,15 @@ your PIN *and* (depending on policy) a physical touch.
 
 ## Architecture
 
-GhostWire is a Cargo workspace with four crates:
+GhostWire is a Cargo workspace with five crates:
 
-| Crate           | Role                                            | Privilege   |
-|-----------------|-------------------------------------------------|-------------|
-| `wgyk-core`     | Crypto, INI parser, IPC types                   | (library)   |
-| `wgyk-service`  | Windows service: tunnel lifecycle, kernel calls | `SYSTEM`    |
-| `wgyk-ui`       | Native GUI window (eframe/egui)                 | user        |
-| `wgyk-cli`      | Diagnostic CLI                                  | user/admin  |
+| Crate                  | Role                                            | Privilege   |
+|------------------------|-------------------------------------------------|-------------|
+| `wgyk-core`            | Crypto, INI parser, IPC types                   | (library)   |
+| `wgyk-service`         | Windows service: tunnel lifecycle, kernel calls | `SYSTEM`    |
+| `wgyk-ui`              | Native GUI window (eframe/egui)                 | user        |
+| `wgyk-cli`             | Diagnostic CLI                                  | user/admin  |
+| `ghostwire-installer`  | MSI installer packaging crate                   | (build only)|
 
 Only `wgyk-core` knows about cryptography. The service invokes it for
 decryption (with the PIN forwarded by the UI through the named pipe)
@@ -180,7 +186,29 @@ The UI and service are decoupled: closing the GUI does not stop the
 tunnel, and the GUI can be relaunched at any time to reconnect to the
 running service and pick up the current state.
 
-## Building
+## Installation (recommended)
+
+Download the latest `GhostWire-x.y.z-x64.msi` from the
+[Releases page](https://github.com/Shaneosaure/GhostWire/releases) and
+double-click to install. Windows will display a SmartScreen warning
+because the installer is not yet code-signed — click **More info** then
+**Run anyway**.
+
+The installer:
+
+- Copies binaries to `C:\Program Files\GhostWire\`
+- Registers and starts the Windows service `GhostWireService`
+- Creates a Start menu shortcut "GhostWire"
+
+After installation, search for "GhostWire" in the Start menu and launch
+the application. The first run will prompt you to select a `.conf.age`
+file — the choice is remembered for subsequent launches.
+
+To uninstall, use the standard Windows **Settings → Apps → Installed
+apps → GhostWire → Uninstall**. The service is stopped and removed
+automatically.
+
+## Building from source
 
 Requirements:
 
@@ -191,6 +219,8 @@ Requirements:
 - The signed `wireguard.dll` from
   [git.zx2c4.com/wireguard-nt](https://git.zx2c4.com/wireguard-nt/about/)
   placed in `assets/wireguard-nt/wireguard.dll`
+- For building the MSI: [WiX Toolset v7](https://wixtoolset.org/) installed
+  via `dotnet tool install --global wix` (requires .NET SDK 6.0+)
 
 ```powershell
 git clone https://github.com/Shaneosaure/GhostWire.git
@@ -202,18 +232,39 @@ The `wireguard.dll` is *not* committed to the repository — see
 [`assets/wireguard-nt/README.md`](assets/wireguard-nt/README.md) for
 how to obtain the signed driver from upstream.
 
-## Installing the service
+## Building the MSI
 
-The service must be installed once before using the GUI. From an
-elevated PowerShell:
+Once the workspace is built and `wireguard.dll` is in place:
+
+```powershell
+# One-time setup: install WiX extensions
+wix extension add WixToolset.UI.wixext/7.0.0
+wix extension add WixToolset.Util.wixext/7.0.0
+
+# Build the MSI
+cd crates\ghostwire-installer\wix
+wix build -arch x64 `
+    -ext WixToolset.UI.wixext `
+    -ext WixToolset.Util.wixext `
+    -o ..\..\..\target\wix\GhostWire-0.1.0-x64.msi `
+    main.wxs
+cd ..\..\..
+```
+
+The MSI is produced at `target\wix\GhostWire-0.1.0-x64.msi` (~3.6 MB).
+
+## Manual service installation (development)
+
+If you're developing without building the MSI, the service can be
+installed manually. From an elevated PowerShell:
 
 ```powershell
 # Copy the WireGuard driver next to the service binary
 Copy-Item assets\wireguard-nt\wireguard.dll target\release\wireguard.dll
 
 # Install and start the service
-target\release\wgyk-cli.exe service-install
-target\release\wgyk-cli.exe service-start
+target\release\wgyk-service.exe install
+target\release\wgyk-service.exe start
 ```
 
 Once installed, the GUI runs as a normal user — no UAC prompts.
@@ -235,27 +286,27 @@ cleanly or leave the tunnel running in the background.
 ## Using the CLI
 
 The CLI exposes the full pipeline as discrete subcommands so each
-layer can be tested independently.
+layer can be tested independently. The CLI binary is named `wgyk.exe`.
 
 ```powershell
 # Probe — list connected YubiKeys
-wgyk-cli probe
+wgyk probe
 
 # Decrypt only — exercises the YubiKey + age stack
-wgyk-cli decrypt path\to\client.conf.age --slot r1
+wgyk decrypt path\to\client.conf.age --slot r1
 
 # Inspect — decrypt + parse INI, show a redacted config summary
-wgyk-cli inspect path\to\client.conf.age --slot r1
+wgyk inspect path\to\client.conf.age --slot r1
 
 # Standalone connect — full pipeline without the service
 # *** Requires running PowerShell as Administrator ***
-wgyk-cli connect path\to\client.conf.age --slot r1
+wgyk connect path\to\client.conf.age --slot r1
 
 # Service-mediated commands (no admin required)
-wgyk-cli service-ping
-wgyk-cli service-status
-wgyk-cli service-connect path\to\client.conf.age --slot r1
-wgyk-cli service-disconnect
+wgyk service-ping
+wgyk service-status
+wgyk service-connect path\to\client.conf.age --slot r1
+wgyk service-disconnect
 ```
 
 `--slot` accepts `authentication`, `signature`, `key-management`,
@@ -311,6 +362,9 @@ runtime never invokes them.
   malicious or corrupted input.
 - The `Debug` impl of internal config types redacts secrets (shown as
   `<redacted>`) so they cannot leak through error logs.
+- The MSI installer is **not yet code-signed** — Windows SmartScreen
+  will display a warning at install time. Code signing is planned for
+  a future release once a certificate is available.
 - This project has not been independently audited. Treat it as
   beta-quality until that is no longer true.
 
@@ -354,6 +408,8 @@ GhostWire would not exist without the work of:
   maintainers for the safe Rust bindings to the kernel driver
 - The [`eframe`/`egui`](https://github.com/emilk/egui) team — for an
   immediate-mode GUI library that makes Rust desktop apps actually fun
+- The [WiX Toolset](https://wixtoolset.org/) team — for making MSI
+  authoring something a single developer can actually do
 - Jason A. Donenfeld and the WireGuard team — for the protocol, the
   kernel driver, and setting the bar for what a VPN should look like
 

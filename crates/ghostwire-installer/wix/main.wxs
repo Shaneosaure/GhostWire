@@ -28,6 +28,7 @@
 
     <!-- UI : utilise WixUI_Minimal (welcome + done) -->
     <ui:WixUI Id="WixUI_Minimal" />
+    <WixVariable Id="WixUILicenseRtf" Value="license.rtf" />
 
     <!-- ── Dossiers ────────────────────────────────────────── -->
     <StandardDirectory Id="ProgramFiles64Folder">
