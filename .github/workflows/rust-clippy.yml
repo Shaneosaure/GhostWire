@@ -1,0 +1,46 @@
+name: rust-clippy analyze
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+  schedule:
+    - cron: '23 10 * * 6'
+
+jobs:
+  rust-clippy-analyze:
+    name: Run rust-clippy analyzing
+    # 🚨 CHANGEMENT 1 : On force l'exécution sur Windows
+    runs-on: windows-latest
+    permissions:
+      contents: read
+      security-events: write
+      actions: read
+      
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # 🚨 CHANGEMENT 2 : Utilisation de l'action moderne et officielle de la communauté
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+
+      - name: Install required cargo
+        run: cargo install clippy-sarif sarif-fmt
+
+      # 🚨 CHANGEMENT 3 : On force 'bash' pour que les pipes et 'tee' fonctionnent sous Windows,
+      # et on met la commande sur une seule ligne pour éviter les erreurs de syntaxe YAML.
+      - name: Run rust-clippy
+        shell: bash
+        run: |
+          cargo clippy --all-features --message-format=json | clippy-sarif | tee rust-clippy-results.sarif | sarif-fmt
+        continue-on-error: true
+
+      - name: Upload analysis results to GitHub
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: rust-clippy-results.sarif
+          wait-for-processing: true
