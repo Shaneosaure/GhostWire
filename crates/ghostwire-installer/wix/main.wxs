@@ -1,13 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
   GhostWire MSI installer (WiX v4+ syntax).
-
-  Build :
-    wix build -arch x64 `
-        -ext WixToolset.UI.wixext `
-        -ext WixToolset.Util.wixext `
-        -o ..\..\..\target\wix\GhostWire-0.1.0-x64.msi `
-        main.wxs
 -->
 <Wix xmlns="http://wixtoolset.org/schemas/v4/wxs"
      xmlns:ui="http://wixtoolset.org/schemas/v4/wxs/ui"
@@ -26,11 +19,21 @@
 
     <MediaTemplate EmbedCab="yes" />
 
-    <!-- UI : utilise WixUI_Minimal (welcome + done) -->
+    <!-- Icône de l'app dans Add/Remove Programs -->
+    <Icon Id="GhostWireIcon" SourceFile="..\..\..\assets\icons\app.ico" />
+    <Property Id="ARPPRODUCTICON" Value="GhostWireIcon" />
+
+    <!-- URL d'aide (optionnel mais propre dans Add/Remove Programs) -->
+    <Property Id="ARPHELPLINK" Value="https://github.com/Shaneosaure/GhostWire" />
+    <Property Id="ARPURLINFOABOUT" Value="https://github.com/Shaneosaure/GhostWire" />
+
+    <!-- UI : custom branding -->
     <ui:WixUI Id="WixUI_Minimal" />
     <WixVariable Id="WixUILicenseRtf" Value="license.rtf" />
+    <WixVariable Id="WixUIBannerBmp" Value="..\..\..\assets\installer\banner.bmp" />
+    <WixVariable Id="WixUIDialogBmp" Value="..\..\..\assets\installer\dialog.bmp" />
 
-    <!-- ── Dossiers ────────────────────────────────────────── -->
+    <!-- Dossiers -->
     <StandardDirectory Id="ProgramFiles64Folder">
       <Directory Id="INSTALLFOLDER" Name="GhostWire" />
     </StandardDirectory>
@@ -39,7 +42,7 @@
       <Directory Id="ApplicationProgramsFolder" Name="GhostWire" />
     </StandardDirectory>
 
-    <!-- ── Composants : binaires + DLL ─────────────────────── -->
+    <!-- Composants -->
     <Component Id="UiBinary" Directory="INSTALLFOLDER" Bitness="always64">
       <File Id="wgyk_ui_exe" Source="..\..\..\target\release\wgyk-ui.exe" KeyPath="yes" />
     </Component>
@@ -52,7 +55,6 @@
       <File Source="..\..\..\assets\wireguard-nt\wireguard.dll" />
     </Component>
 
-    <!-- Composant service : binaire + installation/démarrage SCM -->
     <Component Id="ServiceBinary" Directory="INSTALLFOLDER" Bitness="always64">
       <File Id="wgyk_service_exe"
             Source="..\..\..\target\release\wgyk-service.exe"
@@ -62,7 +64,7 @@
           Id="GhostWireServiceInstall"
           Name="GhostWireService"
           DisplayName="GhostWire VPN Service"
-          Description="Gère les tunnels WireGuard de GhostWire."
+          Description="Manages WireGuard tunnels for GhostWire."
           Type="ownProcess"
           Start="auto"
           ErrorControl="normal"
@@ -79,14 +81,17 @@
           Wait="yes" />
     </Component>
 
-    <!-- ── Raccourci menu Démarrer ────────────────────────── -->
-    <Component Id="StartMenuShortcut" Directory="ApplicationProgramsFolder" Guid="A8B5D1F0-3C7E-4B92-9A4D-1F8E2C5B6A37">
+    <!-- Raccourci menu Démarrer avec l'icône -->
+    <Component Id="StartMenuShortcut"
+               Directory="ApplicationProgramsFolder"
+               Guid="A8B5D1F0-3C7E-4B92-9A4D-1F8E2C5B6A37">
       <Shortcut
           Id="GhostWireShortcut"
           Name="GhostWire"
           Description="GhostWire VPN client"
           Target="[INSTALLFOLDER]wgyk-ui.exe"
-          WorkingDirectory="INSTALLFOLDER" />
+          WorkingDirectory="INSTALLFOLDER"
+          Icon="GhostWireIcon" />
       <RemoveFolder Id="RemoveAppMenuFolder" On="uninstall" />
       <RegistryValue
           Root="HKCU"
@@ -97,7 +102,6 @@
           KeyPath="yes" />
     </Component>
 
-    <!-- ── Feature qui regroupe tout ──────────────────────── -->
     <Feature Id="Main" Title="GhostWire" Level="1">
       <ComponentRef Id="UiBinary" />
       <ComponentRef Id="CliBinary" />

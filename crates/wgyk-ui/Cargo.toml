@@ -28,3 +28,9 @@ serde_json.workspace = true
 
 # Choix d'un fichier .conf.age
 rfd       = "0.15"
+
+
+image = { version = "0.25", default-features = false, features = ["png"] }
+
+[build-dependencies]
+winresource = "0.1"
