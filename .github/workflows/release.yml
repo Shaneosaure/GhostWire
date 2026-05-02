@@ -103,9 +103,9 @@ jobs:
 
             ### Verify integrity
 
-```powershell
-            Get-FileHash GhostWire-${{ steps.version.outputs.version }}-x64.msi -Algorithm SHA256
-```
+            ```powershell
+                        Get-FileHash GhostWire-${{ steps.version.outputs.version }}-x64.msi -Algorithm SHA256
+            ```
 
             Compare with the value in `GhostWire-${{ steps.version.outputs.version }}-x64.msi.sha256`.
 
