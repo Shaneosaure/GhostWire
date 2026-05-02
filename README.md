@@ -193,7 +193,7 @@ Requirements:
   placed in `assets/wireguard-nt/wireguard.dll`
 
 ```powershell
-git clone https://github.com/<your-user>/GhostWire.git
+git clone https://github.com/Shaneosaure/GhostWire.git
 cd GhostWire
 cargo build --workspace --release
 ```
