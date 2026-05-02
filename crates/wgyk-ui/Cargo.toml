@@ -19,7 +19,7 @@ tracing-subscriber.workspace = true
 secrecy.workspace            = true
 
 # UI
-eframe = { version = "0.29", default-features = false, features = ["default_fonts", "glow"] }
+eframe = { version = "0.34", default-features = false, features = ["default_fonts", "glow"] }
 egui   = { workspace = true }
 
 # IPC
@@ -27,7 +27,7 @@ serde.workspace      = true
 serde_json.workspace = true
 
 # Choix d'un fichier .conf.age
-rfd       = "0.15"
+rfd       = "0.17"
 
 
 image = { version = "0.25", default-features = false, features = ["png"] }
