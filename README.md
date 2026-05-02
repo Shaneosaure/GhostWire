@@ -1,14 +1,19 @@
 # GhostWire
 
 <p align="center">
-  <img src="assets/icons/app.png" alt="GhostWire" width="150" />
+  <img src="assets/icons/app.png" alt="GhostWire" width="180" />
 </p>
 
-> A native Rust WireGuard client for Windows that keeps your private key
-> on a YubiKey — and never on your disk.
+<p align="center">
+  <i>A native Rust WireGuard client for Windows that keeps your private key
+  on a YubiKey — and never on your disk.</i>
+</p>
 
-[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
-[![Release: v0.1.0](https://img.shields.io/badge/release-v0.1.0-brightgreen)](#status)
+<p align="center">
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-GPLv3-blue.svg" alt="License: GPL v3"></a>
+  <a href="#status"><img src="https://img.shields.io/badge/release-v0.1.1-brightgreen" alt="Release: v0.1.1"></a>
+  <a href="https://github.com/Shaneosaure/GhostWire/releases"><img src="https://img.shields.io/badge/platform-Windows%2010%2F11-blue" alt="Platform: Windows"></a>
+</p>
 
 GhostWire is an open-source Windows VPN client that bridges three things
 that should have always belonged together: the **WireGuard kernel driver**
@@ -46,18 +51,19 @@ GhostWire is built around three non-negotiable rules:
    primitive comes from a Rust crate compiled into the binary.
 3. **Polite UAC.** The privileged work runs in a Windows service
    (`SYSTEM` context, network rights). The PIN dialog and main window
-   run as the regular user. They communicate over a named pipe with a
-   strict DACL — so connecting to a tunnel doesn't trigger a UAC popup
+   run as the regular user. They communicate over a hardened named
+   pipe — so connecting to a tunnel doesn't trigger a UAC popup
    every time.
 
 ## Status
 
-**v0.1.0 — first functional release.** A real WireGuard tunnel can be
-established, hardware-authenticated, with handshake and encrypted
-traffic flowing — all from a native Rust application packaged as a
-single MSI installer. No external runtime dependencies.
+**v0.1.1 — security-hardened release.** Builds on the v0.1.0 functional
+foundation with comprehensive IPC hardening, custom branding, and
+automated CI/CD releases.
 
 What's implemented today:
+
+### Core functionality
 
 - ✅ **YubiKey PIV decryption** of `age`-encrypted WireGuard configs in RAM,
   with full `piv-p256` protocol implementation (no plugin, no subprocess).
@@ -69,8 +75,8 @@ What's implemented today:
 - ✅ **Windows service** (`wgyk-service`) running as `SYSTEM`, managing
   tunnel lifecycle independently of the UI, with proper SCM signal
   handling for graceful shutdown.
-- ✅ **Named-pipe IPC** between UI and service with DACL restricting
-  access to local users.
+- ✅ **Hardened named-pipe IPC** between UI and service — see
+  [Security](#security-notes) below for details.
 - ✅ **Native GUI** (`wgyk-ui`) with `egui`/`eframe` showing tunnel
   status, stats, and connect/disconnect controls — no UAC required
   for daily use.
@@ -80,18 +86,38 @@ What's implemented today:
   (e.g. left running between sessions) and shows it as connected.
 - ✅ **Graceful shutdown** — closing the window with an active tunnel
   prompts to disconnect, keep alive in background, or cancel.
+
+### Packaging & distribution
+
 - ✅ **MSI installer** (WiX v7) with automatic service registration,
-  Start menu shortcut, and clean uninstall.
+  custom branding, Start menu shortcut with icon, and clean uninstall.
+- ✅ **Application icon** embedded in `wgyk-ui.exe` and shown in
+  Add/Remove Programs.
+- ✅ **Custom EULA** displayed during installation (GPL-3.0-or-later).
+- ✅ **Automated CI/CD** — every `vX.Y.Z` git tag triggers a GitHub
+  Actions workflow that builds the MSI on `windows-latest`, computes
+  its SHA256, and publishes a release with both files.
 - ✅ **Diagnostic CLI** (`wgyk`) with `probe`, `decrypt`, `inspect`,
   `connect`, and service-control subcommands.
 
-Planned for future releases:
+### Planned for future releases
 
-1. Code signing (Authenticode) of the MSI to remove SmartScreen warnings.
-2. Custom EULA in the installer (currently shows placeholder text).
-3. Application icon (`.ico`) for the executable and Add/Remove Programs.
-4. Auto-update mechanism for the application.
-5. Multiple-config management with quick switching from the UI.
+- Code signing (Authenticode) of the MSI to remove SmartScreen warnings
+- Auto-update mechanism for the application
+- Multiple-config management with quick switching from the UI
+- Visual feedback during YubiKey touch wait (currently the UI freezes
+  briefly while the user is expected to touch the device)
+- In-app log viewer surfacing service-side `tracing` events
+
+## Recent updates
+
+- **v0.1.1** (May 2026) — IPC hardening: restricted DACL, Mandatory
+  Integrity Label, concurrency limit, Connect rate limit, config path
+  validation. Custom branding integrated into the MSI installer
+  (icon, banner, dialog). Documentation refresh.
+- **v0.1.0** (May 2026) — First functional release. End-to-end
+  pipeline working: YubiKey decryption → kernel tunnel. MSI installer
+  produced and distributed via GitHub Releases.
 
 ## How it works (cryptographic pipeline)
 
@@ -212,6 +238,15 @@ To uninstall, use the standard Windows **Settings → Apps → Installed
 apps → GhostWire → Uninstall**. The service is stopped and removed
 automatically.
 
+### Verifying the download
+
+Each release ships with a `.sha256` companion file. To verify:
+
+```powershell
+Get-FileHash GhostWire-0.1.1-x64.msi -Algorithm SHA256
+# Compare with the value in GhostWire-0.1.1-x64.msi.sha256
+```
+
 ## Building from source
 
 Requirements:
@@ -242,20 +277,28 @@ Once the workspace is built and `wireguard.dll` is in place:
 
 ```powershell
 # One-time setup: install WiX extensions
-wix extension add WixToolset.UI.wixext/7.0.0
-wix extension add WixToolset.Util.wixext/7.0.0
+wix extension add --global WixToolset.UI.wixext/7.0.0
+wix extension add --global WixToolset.Util.wixext/7.0.0
+
+# Copy the driver next to the release binaries
+Copy-Item assets\wireguard-nt\wireguard.dll target\release\wireguard.dll
 
 # Build the MSI
 cd crates\ghostwire-installer\wix
 wix build -arch x64 `
     -ext WixToolset.UI.wixext `
     -ext WixToolset.Util.wixext `
-    -o ..\..\..\target\wix\GhostWire-0.1.0-x64.msi `
+    -o ..\..\..\target\wix\GhostWire-0.1.1-x64.msi `
     main.wxs
 cd ..\..\..
 ```
 
-The MSI is produced at `target\wix\GhostWire-0.1.0-x64.msi` (~3.6 MB).
+The MSI is produced at `target\wix\GhostWire-0.1.1-x64.msi` (~3.6 MB).
+
+For automated builds, every git tag matching `v*` triggers a GitHub
+Actions workflow that performs the same steps on a fresh
+`windows-latest` runner and publishes the resulting MSI as a release
+asset — see [`.github/workflows/release.yml`](.github/workflows/release.yml).
 
 ## Manual service installation (development)
 
@@ -352,6 +395,13 @@ runtime never invokes them.
 
 ## Security notes
 
+GhostWire's threat model assumes an attacker may have unprivileged
+local code execution on the same machine, but does not have physical
+access to the YubiKey. Several layers of defense narrow what such an
+attacker can achieve.
+
+### Cryptographic core
+
 - `SecretString` (from the [`secrecy`](https://crates.io/crates/secrecy)
   crate) wraps both the decrypted config and the WireGuard private
   key; both are zeroized automatically when dropped.
@@ -359,13 +409,55 @@ runtime never invokes them.
   in the CLI), wrapped in `SecretString` from input to use, and sent
   over the named pipe to the service for the duration of one
   connection attempt only.
-- The named pipe DACL grants `GR;GW` to the local users group only.
 - Touch and PIN policies are honored by the YubiKey itself — GhostWire
   cannot bypass them, only forward what the user provides.
 - A 64 KiB upper bound is enforced on decrypted plaintext to mitigate
   malicious or corrupted input.
 - The `Debug` impl of internal config types redacts secrets (shown as
   `<redacted>`) so they cannot leak through error logs.
+
+### IPC hardening (v0.1.1)
+
+The named pipe between the user-facing UI and the `SYSTEM`-context
+service is the primary attack surface for local privilege escalation.
+It is hardened along five axes:
+
+- **Restricted DACL.** Only `SYSTEM`, `Built-in Administrators`, and
+  `Interactive Users` can open the pipe. Service accounts
+  (`NetworkService`, `LocalService`), other-session processes, and
+  unauthenticated callers are rejected by the kernel before any byte
+  is read.
+- **Mandatory Integrity Level.** A SACL of `(ML;;NW;;;ME)` blocks
+  processes running below Medium integrity (e.g. sandboxed browser
+  tabs, AppContainers) from writing to the pipe.
+- **Concurrency limit.** At most four simultaneous client connections;
+  excess connections are dropped immediately, preventing OS-thread
+  exhaustion attacks against the service.
+- **`Connect` rate limit.** Three attempts per 60-second sliding window
+  — globally, not per-client. This matches the YubiKey's PIV PIN
+  retry counter and prevents an attacker from bricking the applet
+  with three deliberately wrong PINs.
+- **Config path validation.** The `config_path` argument must be
+  absolute, point to a regular file with a `.age` extension and a
+  size below 64 KiB, with no UNC or device-namespace prefixes
+  (`\\?\`, `\\.\`).
+
+### DLL loading
+
+The `wireguard.dll` driver is loaded via an absolute path resolved
+from `std::env::current_exe()` rather than the Windows DLL search
+order. Even if an attacker were able to plant a malicious
+`wireguard.dll` somewhere on `%PATH%`, the service would not pick
+it up.
+
+### Frame size
+
+The IPC framing layer rejects any message header declaring a payload
+larger than 64 KiB *before* allocating the receive buffer, preventing
+memory-exhaustion attacks against the service.
+
+### Out of scope (yet)
+
 - The MSI installer is **not yet code-signed** — Windows SmartScreen
   will display a warning at install time. Code signing is planned for
   a future release once a certificate is available.
