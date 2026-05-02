@@ -1,5 +1,7 @@
 # GhostWire
-
+<p align="center">
+  <img src="assets/icons/app.png" alt="GhostWire" width="600" />
+</p>
 > A native Rust WireGuard client for Windows that keeps your private key
 > on a YubiKey — and never on your disk.
 
