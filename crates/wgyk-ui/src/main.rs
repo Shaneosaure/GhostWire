@@ -23,11 +23,11 @@ fn main() -> Result<()> {
 
     tracing::info!("GhostWire UI démarrée");
 
-    if let Err(e) = ipc::ping() {
+    match ipc::ping() { Err(e) => {
         tracing::warn!("service injoignable au démarrage : {e}");
-    } else {
+    } _ => {
         tracing::info!("✓ Service GhostWire joignable");
-    }
+    }}
 
     let icon = load_icon();
 

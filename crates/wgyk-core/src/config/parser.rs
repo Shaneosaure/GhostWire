@@ -143,7 +143,7 @@ enum Section {
 
 /// Retire `#...` et `;...` en fin de ligne.
 fn strip_comment(s: &str) -> &str {
-    s.split_once(|c| c == '#' || c == ';')
+    s.split_once(['#', ';'])
         .map(|(before, _)| before)
         .unwrap_or(s)
 }

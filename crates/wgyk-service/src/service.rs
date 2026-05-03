@@ -24,7 +24,7 @@ const SERVICE_DISPLAY: &str = "GhostWire VPN Service";
 const SERVICE_DESC: &str =
     "Gère les tunnels WireGuard de GhostWire. Ne pas arrêter manuellement.";
 
-/// Macro windows-service : enregistre le point d'entrée SCM.
+// Macro windows-service : enregistre le point d'entrée SCM.
 define_windows_service!(ffi_service_main, service_main);
 
 /// Appelé par Windows quand le service démarre.

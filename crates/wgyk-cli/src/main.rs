@@ -197,7 +197,7 @@ fn cmd_decrypt(path: PathBuf, slot: SlotId, show_plaintext: bool) -> Result<()> 
             .collect();
 
         let peer_count = sections.iter().filter(|s| **s == "[Peer]").count();
-        let has_iface  = sections.iter().any(|s| *s == "[Interface]");
+        let has_iface  = sections.contains(&"[Interface]");
 
         println!("  Sections   : {sections:?}");
         println!("  Interface  : {}", if has_iface { "✓" } else { "✗ MANQUANTE" });

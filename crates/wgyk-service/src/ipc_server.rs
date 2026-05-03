@@ -434,7 +434,7 @@ fn create_pipe_instance() -> Result<std::fs::File> {
     }
     .context("ConvertStringSecurityDescriptorToSecurityDescriptorA échoué")?;
 
-    let mut sa = SECURITY_ATTRIBUTES {
+    let sa = SECURITY_ATTRIBUTES {
         nLength: std::mem::size_of::<SECURITY_ATTRIBUTES>() as u32,
         lpSecurityDescriptor: sd.0,
         bInheritHandle: false.into(),
@@ -451,7 +451,7 @@ fn create_pipe_instance() -> Result<std::fs::File> {
             65536,
             65536,
             0,
-            Some(&mut sa),
+            Some(&sa),
         )
     }
     .context("CreateNamedPipe échoué")?;
