@@ -182,13 +182,15 @@ impl GhostWireApp {
 
     // ── Rendu ─────────────────────────────────────────────────────────
 
-    fn render_main_window(&mut self, ctx: &egui::Context) {
+    fn render_main_window(&mut self, ui: &mut egui::Ui) {
         let (tunnel_state, tunnel_info, last_error) = {
             let s = self.state.lock().unwrap();
             (s.tunnel, s.tunnel_info.clone(), s.last_error.clone())
         };
 
-        egui::CentralPanel::default().show(ctx, |ui| {
+        // On wrap dans un CentralPanel::show_inside pour garder le même
+        // look (background, marges) qu'en 0.29.
+        egui::CentralPanel::default().show_inside(ui, |ui| {
             ui.add_space(16.0);
 
             // ── Statut ───────────────────────────────────────────────
@@ -312,8 +314,9 @@ impl GhostWireApp {
         });
 
         // Popup au-dessus du panel principal.
+        // Note: Window utilise un Context, donc on le récupère via ui.ctx().
         if self.show_quit_confirm {
-            self.render_quit_confirm(ctx);
+            self.render_quit_confirm(ui.ctx());
         }
     }
 
@@ -414,9 +417,15 @@ impl GhostWireApp {
 }
 
 impl eframe::App for GhostWireApp {
-    fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+    /// Logique sans rendu : appelée avant `ui` à chaque frame.
+    /// Idéal pour le polling IPC et la gestion des événements viewport.
+    fn logic(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         self.handle_close_request(ctx);
         self.poll_ipc_results();
-        self.render_main_window(ctx);
+    }
+
+    /// Rendu : appelé chaque frame avec un `&mut Ui` racine.
+    fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
+        self.render_main_window(ui);
     }
 }

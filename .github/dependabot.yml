@@ -1,23 +1,27 @@
 version: 2
 updates:
-  - package-ecosystem: "cargo" # Indique à Dependabot que c'est un projet Rust
-    directory: "/"             # Pointe vers la racine où se trouve le Cargo.toml global
+  - package-ecosystem: "cargo"
+    directory: "/"
     schedule:
-      interval: "weekly"       # Vérifie les mises à jour une fois par semaine
-      day: "monday"            # (Optionnel) Le jour de la vérification
-
-    # Ajoute automatiquement ces labels aux Pull Requests pour plus de clarté
+      interval: "weekly"
+      day: "monday"
     labels:
       - "dependencies"
       - "rust"
-
-    # ASTUCE CRUCIALE POUR TON WORKSPACE RUST :
-    # Grouper les mises à jour pour éviter le spam de Pull Requests.
     groups:
       cargo-dependencies:
         patterns:
           - "*"
-          
+    ignore:
+      # sha2 0.11 et hkdf 0.13 requièrent digest 0.11, mais le reste de
+      # notre stack crypto (age, yubikey, p256, hmac, chacha20poly1305)
+      # est encore sur digest 0.10. À débloquer quand yubikey aura migré
+      # — surveille https://github.com/iqlusioninc/yubikey-rs/releases
+      - dependency-name: "sha2"
+        versions: [">=0.11"]
+      - dependency-name: "hkdf"
+        versions: [">=0.13"]
+
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
