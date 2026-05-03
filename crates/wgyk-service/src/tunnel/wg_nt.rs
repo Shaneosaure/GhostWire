@@ -80,11 +80,6 @@ pub fn start_tunnel(config: &WgConfig) -> Result<Tunnel> {
     Ok(Tunnel { _adapter: adapter })
 }
 
-pub fn stop_tunnel(tunnel: Tunnel) {
-    drop(tunnel);
-    tracing::info!("tunnel GhostWire arrêté");
-}
-
 fn build_set_peer(p: &wgyk_core::config::PeerConfig) -> Result<SetPeer> {
     let endpoint: SocketAddr = match &p.endpoint {
         None => return Err(anyhow!("peer sans endpoint — non supporté en mode client")),
