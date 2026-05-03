@@ -13,7 +13,7 @@ use std::str::FromStr;
 
 use base64::{engine::general_purpose::STANDARD, Engine};
 use ipnet::IpNet;
-use secrecy::Secret;
+use secrecy::SecretBox;
 use thiserror::Error;
 
 use super::{
@@ -260,7 +260,7 @@ impl InterfaceBuilder {
     fn build(self) -> Result<InterfaceConfig, ConfigError> {
         let pk = self.private_key.ok_or(ConfigError::MissingPrivateKey)?;
         Ok(InterfaceConfig {
-            private_key: Secret::new(WgPrivateKey(pk)),
+            private_key: SecretBox::new(Box::new(WgPrivateKey(pk))),
             addresses: self.addresses,
             listen_port: self.listen_port,
             mtu: self.mtu,
@@ -322,7 +322,7 @@ impl PeerBuilder {
             public_key: self.public_key.ok_or(ConfigError::PeerMissingPublicKey)?,
             preshared_key: self
                 .preshared_key
-                .map(|k| Secret::new(WgPrivateKey(k))),
+                .map(|k| SecretBox::new(Box::new(WgPrivateKey(k)))),
             allowed_ips: self.allowed_ips,
             endpoint: self.endpoint,
             persistent_keepalive: self.persistent_keepalive,

@@ -143,9 +143,15 @@ impl YubiKeyIdentity {
         .decrypt((&nonce).into(), stanza.body.as_slice())
         .map_err(|_| dec_err("file key wrap invalide"))?;
 
-    let mut file_key = [0u8; FILE_KEY_BYTES];
-    file_key.copy_from_slice(&plaintext);
-    Ok(FileKey::from(file_key))
+    if plaintext.len() != FILE_KEY_BYTES {
+        return Err(dec_err("longueur plaintext inattendue"));
+    }
+
+    // age 0.11 : FileKey se construit via init_with_mut, qui zeroize
+    // automatiquement le buffer si la closure échoue.
+    Ok(FileKey::init_with_mut(|file_key| {
+        file_key.copy_from_slice(&plaintext);
+    }))
   }
 }
 

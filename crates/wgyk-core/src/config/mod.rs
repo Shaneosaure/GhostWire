@@ -17,7 +17,7 @@ pub mod parser;
 use std::net::SocketAddr;
 
 use ipnet::IpNet;
-use secrecy::Secret;
+use secrecy::{CloneableSecret, SecretBox};
 use zeroize::Zeroize;
 
 pub type WgKeyBytes = [u8; 32];
@@ -32,14 +32,14 @@ impl WgPrivateKey {
     }
 }
 
-// Traits requis par `secrecy::Secret<WgPrivateKey>`.
-impl secrecy::CloneableSecret for WgPrivateKey {}
-impl secrecy::DebugSecret for WgPrivateKey {}
+// Trait marker : autorise SecretBox<WgPrivateKey> à être cloné.
+// secrecy 0.10 : le bound est `Clone + Zeroize`, qu'on a déjà via le derive.
+impl CloneableSecret for WgPrivateKey {}
 
 /// Section `[Interface]`.
 #[derive(Clone)]
 pub struct InterfaceConfig {
-    pub private_key: Secret<WgPrivateKey>,
+    pub private_key: SecretBox<WgPrivateKey>,
     pub addresses: Vec<IpNet>,
     pub listen_port: Option<u16>,
     pub mtu: Option<u16>,
@@ -63,7 +63,7 @@ impl std::fmt::Debug for InterfaceConfig {
 #[derive(Clone)]
 pub struct PeerConfig {
     pub public_key: WgKeyBytes,
-    pub preshared_key: Option<Secret<WgPrivateKey>>,
+    pub preshared_key: Option<SecretBox<WgPrivateKey>>,
     pub allowed_ips: Vec<IpNet>,
     pub endpoint: Option<EndpointSpec>,
     pub persistent_keepalive: Option<u16>,

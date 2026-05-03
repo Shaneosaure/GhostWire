@@ -48,16 +48,13 @@ pub fn decrypt_config(
     // (3) Décryptor `age`. On rejette explicitement les fichiers chiffrés
     //     par passphrase : pour ce client, seuls les destinataires PIV ont
     //     du sens, sinon la YubiKey ne sert à rien.
-    let decryptor = match Decryptor::new(&ciphertext[..])
-        .context("le fichier n'est pas un flux age valide")?
-    {
-        Decryptor::Recipients(d) => d,
-        Decryptor::Passphrase(_) => {
-            return Err(anyhow!(
-                "fichier chiffré par passphrase : non supporté par ce client"
-            ));
-        }
-    };
+    let decryptor = Decryptor::new(&ciphertext[..])
+        .context("le fichier n'est pas un flux age valide")?;
+    if decryptor.is_scrypt() {
+        return Err(anyhow!(
+            "fichier chiffré par passphrase : non supporté par ce client"
+        ));
+    }
 
     // (4) Streaming + borne. On itère un seul `dyn Identity` : la YubiKey.
     let mut reader = decryptor
@@ -85,7 +82,7 @@ pub fn decrypt_config(
         .map_err(|e| anyhow!("config déchiffrée non-UTF-8 : {e}"))?;
 
     tracing::info!(bytes = s.len(), "config WireGuard déchiffrée en RAM");
-    Ok(SecretString::new(s))
+    Ok(SecretString::new(s.into_boxed_str()))
 }
 
 #[cfg(test)]
@@ -97,7 +94,7 @@ mod tests {
     #[test]
     #[ignore = "nécessite une YubiKey insérée + slot PIV 9c configurée"]
     fn poc_decrypt_real_yubikey() {
-        let pin = SecretString::new("123456".to_string()); // PIN par défaut
+        let pin = SecretString::new("123456".to_string().into_boxed_str()); // PIN par défaut
         let cfg = decrypt_config(
             "tests/fixtures/client.conf.age",
             pin,
