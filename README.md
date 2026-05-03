@@ -11,7 +11,7 @@
 
 <p align="center">
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-GPLv3-blue.svg" alt="License: GPL v3"></a>
-  <a href="#status"><img src="https://img.shields.io/badge/release-v0.2.0-brightgreen" alt="Release: v0.2.0"></a>
+  <a href="#status"><img src="https://img.shields.io/badge/release-v0.2.1-brightgreen" alt="Release: v0.2.1"></a>
   <a href="https://github.com/Shaneosaure/GhostWire/releases"><img src="https://img.shields.io/badge/platform-Windows%2010%2F11-blue" alt="Platform: Windows"></a>
   <a href="https://www.rust-lang.org/"><img src="https://img.shields.io/badge/rust-1.95%2B-orange?logo=rust" alt="Rust 1.95+"></a>
   <a href="https://blog.rust-lang.org/"><img src="https://img.shields.io/badge/edition-2024-orange" alt="Rust Edition 2024"></a>
@@ -120,6 +120,9 @@ What's implemented today:
 
 ## Recent updates
 
+- **v0.2.1** (May 2026) — Polish release: explicit secret drop order
+  in the IPC connection handler, dead code cleanup, fully version-
+  dynamic release workflow. No user-facing changes.
 - **v0.2.0** (May 2026) — Migration to Rust Edition 2024 (MSRV 1.95).
   Codebase modernized via `cargo fix --edition` and `cargo clippy --fix`,
   with explicit drop-order control for secrets in the IPC handler. Zero
