@@ -177,7 +177,7 @@ fn cmd_decrypt(path: PathBuf, slot: SlotId, show_plaintext: bool) -> Result<()> 
 
     let pin = rpassword::prompt_password("PIN YubiKey : ")
         .context("lecture du PIN échouée")?;
-    let pin = SecretString::new(pin);
+    let pin = SecretString::new(pin.into());
 
     let cfg = wgyk_core::crypto::decrypt_config(&path, pin, slot)
         .context("déchiffrement échoué — mauvais PIN ? mauvaise slot ?")?;
@@ -216,7 +216,7 @@ fn cmd_inspect(path: PathBuf, slot: SlotId) -> Result<()> {
     }
     let pin = rpassword::prompt_password("PIN YubiKey : ")
         .context("lecture du PIN échouée")?;
-    let pin = SecretString::new(pin);
+    let pin = SecretString::new(pin.into());
 
     let plaintext = wgyk_core::crypto::decrypt_config(&path, pin, slot)
         .context("déchiffrement échoué")?;
@@ -299,7 +299,7 @@ fn cmd_connect(path: PathBuf, slot: SlotId) -> Result<()> {
 
     let pin = rpassword::prompt_password("PIN YubiKey : ")
         .context("lecture du PIN")?;
-    let pin = SecretString::new(pin);
+    let pin = SecretString::new(pin.into());
 
     let plaintext = wgyk_core::crypto::decrypt_config(&path, pin, slot)
         .context("déchiffrement échoué")?;

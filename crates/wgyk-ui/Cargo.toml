@@ -27,7 +27,7 @@ serde.workspace      = true
 serde_json.workspace = true
 
 # Choix d'un fichier .conf.age
-rfd       = "0.15"
+rfd       = "0.17"
 
 
 image = { version = "0.25", default-features = false, features = ["png"] }

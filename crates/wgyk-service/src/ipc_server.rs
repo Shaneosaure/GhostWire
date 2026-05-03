@@ -284,7 +284,7 @@ fn handle_request(request: Request, tunnels: &TunnelMap) -> Response {
                 }
             };
 
-            let pin_secret = SecretString::new(pin);
+            let pin_secret = SecretString::new(pin.into());
 
             // Déchiffrement (utilise le path validé).
             let plaintext = match wgyk_core::crypto::decrypt_config(
