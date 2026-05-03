@@ -9,7 +9,7 @@
   <Package
       Name="GhostWire"
       Manufacturer="Shane"
-      Version="0.1.2"
+      Version="0.1.3"
       UpgradeCode="177BB24E-1F8B-4C94-A2A2-8E1356849C5F"
       Scope="perMachine">
 
