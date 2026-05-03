@@ -9,7 +9,7 @@ members = [
 ]
 
 [workspace.package]
-version      = "0.1.0"
+version      = "0.1.1"
 edition      = "2021"
 rust-version = "1.78"
 license      = "GPL-3.0-or-later"
@@ -20,7 +20,7 @@ repository   = "https://github.com/Shaneosaure/GhostWire"
 [workspace.dependencies]
 # --- Diagnostics ---
 anyhow             = "1"
-thiserror          = "1"
+thiserror          = "2"
 tracing            = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 
@@ -45,7 +45,7 @@ serde_json  = "1"
 bytes       = "1"
 
 # --- Windows ---
-windows = { version = "0.58", features = [
+windows = { version = "0.62", features = [
     "Win32_Foundation",
     "Win32_Security",
     "Win32_Security_Authorization",
@@ -55,9 +55,9 @@ windows = { version = "0.58", features = [
     "Win32_Storage_FileSystem",
     "Win32_System_IO",
     "Win32_UI_WindowsAndMessaging",
-    "Win32_Graphics_Gdi",           # ← pour SetLayeredWindowAttributes
+    "Win32_Graphics_Gdi",
 ] }
-windows-service = "0.7"
+windows-service = "0.8"
 
 # --- Tunnel ---
 # wireguard-nt fait *tout* le WireGuard en kernel (préféré).
