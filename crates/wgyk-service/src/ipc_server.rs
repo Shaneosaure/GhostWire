@@ -29,6 +29,14 @@
 //!   pointant vers un fichier `.age` régulier de moins de 64 KiB, sont
 //!   acceptés. Les device paths (`\\.\`, `\\?\`) et les UNC paths réseau
 //!   sont rejetés.
+//!
+//! - **Drop order explicite des secrets** : la phase qui touche aux
+//!   secrets (PIN → plaintext → config parsée) est isolée dans une
+//!   closure dont la fermeture précède le stockage du tunnel et l'envoi
+//!   de la réponse au client. Les `SecretBox<>` sont ainsi zeroizés
+//!   avant que la moindre information ne quitte le service. Ce pattern
+//!   rend le comportement explicite et indépendant des changements de
+//!   drop order entre éditions Rust 2021 et 2024.
 
 use std::io::{BufReader, BufWriter};
 use std::path::PathBuf;
@@ -45,6 +53,7 @@ use wgyk_core::ipc::{
 
 use crate::state::TunnelMap;
 use crate::tunnel::wg_nt::start_tunnel;
+use crate::tunnel::Tunnel;
 
 // ─────────────────────────── Limites de sécurité ──────────────────────────
 
@@ -286,47 +295,64 @@ fn handle_request(request: Request, tunnels: &TunnelMap) -> Response {
 
             let pin_secret = SecretString::new(pin.into());
 
-            // Déchiffrement (utilise le path validé).
-            let plaintext = match wgyk_core::crypto::decrypt_config(
-                &validated_path,
-                pin_secret,
-                slot_id,
-            ) {
-                Ok(p) => p,
-                Err(e) => {
-                    return Response::Error {
-                        message: format!("déchiffrement échoué : {e:#}"),
-                    }
-                }
-            };
-
-            // Parsing.
+            // ─── Phase secrète : isolée dans une closure pour drop order ───
+            //
+            // Tout ce qui touche aux secrets (PIN → plaintext déchiffré →
+            // config parsée) vit dans cette closure. Quand elle retourne,
+            // les `SecretBox<>` sont droppés et leur mémoire zeroizée.
+            //
+            // On en ressort uniquement :
+            //   - le tunnel construit (qui ne contient plus de secret —
+            //     la clé privée a été poussée au kernel WireGuard) ;
+            //   - les metadata publiques (interface, address, peer_endpoint).
+            //
+            // Garantie : au moment où on stocke le tunnel dans la map et où
+            // on construit la `Response::Connected`, plus aucun secret
+            // n'est en RAM côté service. Ce comportement est explicite et
+            // ne dépend pas du drop order de l'édition Rust active
+            // (cf. <https://doc.rust-lang.org/edition-guide/rust-2024/temporary-tail-expr-scope.html>).
             use secrecy::ExposeSecret;
-            let config = match wgyk_core::config::parse(plaintext.expose_secret()) {
-                Ok(c) => c,
-                Err(e) => {
-                    return Response::Error {
-                        message: format!("parsing config échoué : {e}"),
-                    }
-                }
-            };
+            let tunnel_result: Result<(Tunnel, String, String), String> = (|| {
+                let plaintext = wgyk_core::crypto::decrypt_config(
+                    &validated_path,
+                    pin_secret,
+                    slot_id,
+                )
+                .map_err(|e| format!("déchiffrement échoué : {e:#}"))?;
 
-            // Tunnel.
-            let address = config
-                .interface
-                .addresses
-                .first()
-                .map(|a| a.to_string())
-                .unwrap_or_default();
-            let peer_endpoint = config
-                .peers
-                .first()
-                .and_then(|p| p.endpoint.as_ref())
-                .map(|e| format!("{e:?}"))
-                .unwrap_or_default();
+                let config = wgyk_core::config::parse(plaintext.expose_secret())
+                    .map_err(|e| format!("parsing config échoué : {e}"))?;
 
-            match start_tunnel(&config) {
-                Ok(tunnel) => {
+                // Extraction des metadata publiques avant de drop la config.
+                // Ces champs ne contiennent aucun secret.
+                let address = config
+                    .interface
+                    .addresses
+                    .first()
+                    .map(|a| a.to_string())
+                    .unwrap_or_default();
+                let peer_endpoint = config
+                    .peers
+                    .first()
+                    .and_then(|p| p.endpoint.as_ref())
+                    .map(|e| format!("{e:?}"))
+                    .unwrap_or_default();
+
+                let tunnel = start_tunnel(&config)
+                    .map_err(|e| format!("tunnel échoué : {e:#}"))?;
+
+                // À la sortie de cette closure, `plaintext` et `config`
+                // (deux SecretBox) sont droppés → zeroize.
+                Ok((tunnel, address, peer_endpoint))
+            })();
+
+            // ─── Plus aucun secret en RAM ici ──────────────────────────────
+            //
+            // On peut stocker le tunnel et construire la réponse en toute
+            // sérénité : le client recevra `Connected` ou `Error` après
+            // que les SecretBox ont été zeroizés.
+            match tunnel_result {
+                Ok((tunnel, address, peer_endpoint)) => {
                     let iface = "GhostWire".to_string();
                     tunnels.lock().unwrap().insert(iface.clone(), tunnel);
                     Response::Connected {
@@ -335,9 +361,7 @@ fn handle_request(request: Request, tunnels: &TunnelMap) -> Response {
                         peer_endpoint,
                     }
                 }
-                Err(e) => Response::Error {
-                    message: format!("tunnel échoué : {e:#}"),
-                },
+                Err(message) => Response::Error { message },
             }
         }
 

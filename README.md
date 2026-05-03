@@ -11,8 +11,10 @@
 
 <p align="center">
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-GPLv3-blue.svg" alt="License: GPL v3"></a>
-  <a href="#status"><img src="https://img.shields.io/badge/release-v0.1.1-brightgreen" alt="Release: v0.1.1"></a>
+  <a href="#status"><img src="https://img.shields.io/badge/release-v0.2.0-brightgreen" alt="Release: v0.2.0"></a>
   <a href="https://github.com/Shaneosaure/GhostWire/releases"><img src="https://img.shields.io/badge/platform-Windows%2010%2F11-blue" alt="Platform: Windows"></a>
+  <a href="https://www.rust-lang.org/"><img src="https://img.shields.io/badge/rust-1.95%2B-orange?logo=rust" alt="Rust 1.95+"></a>
+  <a href="https://blog.rust-lang.org/"><img src="https://img.shields.io/badge/edition-2024-orange" alt="Rust Edition 2024"></a>
 </p>
 
 GhostWire is an open-source Windows VPN client that bridges three things
@@ -35,7 +37,7 @@ a hardware token in the first place.
 GhostWire closes that window by treating the cryptographic core as a
 single in-process pipeline: read ciphertext → ask YubiKey to unwrap →
 parse INI in memory → push to kernel. That's it. The plaintext config
-lives in a `SecretString` that's automatically zeroized when the scope
+lives in a `SecretBox` that's automatically zeroized when the scope
 ends, the YubiKey's private key never leaves the chip, and no byte of
 your real configuration is ever flushed to a filesystem.
 
@@ -57,9 +59,11 @@ GhostWire is built around three non-negotiable rules:
 
 ## Status
 
-**v0.1.1 — security-hardened release.** Builds on the v0.1.0 functional
-foundation with comprehensive IPC hardening, custom branding, and
-automated CI/CD releases.
+**v0.2.0 — Rust 2024 modernization.** Full upgrade to the Rust 2024
+edition (MSRV 1.95), modernized cryptographic stack (`secrecy 0.10`,
+`age 0.11`), and a refreshed UI built on `eframe`/`egui 0.34` with the
+new `logic` / `ui` separation pattern. Built on the security-hardened
+foundation of v0.1.1.
 
 What's implemented today:
 
@@ -68,7 +72,7 @@ What's implemented today:
 - ✅ **YubiKey PIV decryption** of `age`-encrypted WireGuard configs in RAM,
   with full `piv-p256` protocol implementation (no plugin, no subprocess).
 - ✅ **Native INI parser** for WireGuard configs, with strict typing and
-  `Secret<>`-wrapped private keys.
+  `SecretBox`-wrapped private keys.
 - ✅ **`wireguard-nt` integration** that establishes a real kernel-mode
   tunnel: handshake, routing, MTU, IP assignment all configured via the
   native API.
@@ -77,7 +81,7 @@ What's implemented today:
   handling for graceful shutdown.
 - ✅ **Hardened named-pipe IPC** between UI and service — see
   [Security](#security-notes) below for details.
-- ✅ **Native GUI** (`wgyk-ui`) with `egui`/`eframe` showing tunnel
+- ✅ **Native GUI** (`wgyk-ui`) with `egui`/`eframe` 0.34 showing tunnel
   status, stats, and connect/disconnect controls — no UAC required
   for daily use.
 - ✅ **Configuration persistence** — last-used `.conf.age` is remembered
@@ -86,6 +90,11 @@ What's implemented today:
   (e.g. left running between sessions) and shows it as connected.
 - ✅ **Graceful shutdown** — closing the window with an active tunnel
   prompts to disconnect, keep alive in background, or cancel.
+- ✅ **Explicit secret drop order** — the connection flow uses an
+  explicit scope to guarantee `SecretBox<>` instances holding plaintext
+  config and parsed credentials are zeroized before the response is
+  returned to the client. Robust under both Rust 2021 and 2024 drop
+  semantics.
 
 ### Packaging & distribution
 
@@ -111,10 +120,21 @@ What's implemented today:
 
 ## Recent updates
 
+- **v0.2.0** (May 2026) — Migration to Rust Edition 2024 (MSRV 1.95).
+  Codebase modernized via `cargo fix --edition` and `cargo clippy --fix`,
+  with explicit drop-order control for secrets in the IPC handler. Zero
+  warnings in release build.
+- **v0.1.3** (May 2026) — UI framework upgrade: `eframe`/`egui` 0.29 →
+  0.34, adopting the new `App::ui` required method and `logic` provided
+  method for cleaner separation of state updates and rendering.
+- **v0.1.2** (May 2026) — Cryptographic stack refresh: `secrecy` 0.8 →
+  0.10 (`Secret<T>` → `SecretBox<T>`, `CloneableSecret` impl restored),
+  `age` 0.10 → 0.11 (opaque `Decryptor`, `FileKey::init_with_mut`).
+  Plus `thiserror 2`, `windows 0.62`, `windows-service 0.8`, `rfd 0.17`.
 - **v0.1.1** (May 2026) — IPC hardening: restricted DACL, Mandatory
   Integrity Label, concurrency limit, Connect rate limit, config path
   validation. Custom branding integrated into the MSI installer
-  (icon, banner, dialog). Documentation refresh.
+  (icon, banner, dialog).
 - **v0.1.0** (May 2026) — First functional release. End-to-end
   pipeline working: YubiKey decryption → kernel tunnel. MSI installer
   produced and distributed via GitHub Releases.
@@ -167,8 +187,8 @@ client.conf.age ─┤ Read ciphertext  │  (only disk I/O of the runtime)
               └────────────┬────────────┘
                            │
                            ▼
-                   SecretString
-                   (zeroized on drop)
+                   SecretBox<String>
+                  (zeroized on drop)
                            │
                            ▼
               ┌─────────────────────────┐
@@ -243,15 +263,15 @@ automatically.
 Each release ships with a `.sha256` companion file. To verify:
 
 ```powershell
-Get-FileHash GhostWire-0.1.1-x64.msi -Algorithm SHA256
-# Compare with the value in GhostWire-0.1.1-x64.msi.sha256
+Get-FileHash GhostWire-0.2.0-x64.msi -Algorithm SHA256
+# Compare with the value in GhostWire-0.2.0-x64.msi.sha256
 ```
 
 ## Building from source
 
 Requirements:
 
-- Rust 1.78 or newer
+- **Rust 1.95 or newer** (Edition 2024)
 - Windows 10/11 (PC/SC service `SCardSvr` enabled — default)
 - A YubiKey 5 series (firmware ≥ 5.2) with PIV support
 - An `age` identity provisioned on a retired PIV slot (R1–R20)
@@ -288,12 +308,12 @@ cd crates\ghostwire-installer\wix
 wix build -arch x64 `
     -ext WixToolset.UI.wixext `
     -ext WixToolset.Util.wixext `
-    -o ..\..\..\target\wix\GhostWire-0.1.1-x64.msi `
+    -o ..\..\..\target\wix\GhostWire-0.2.0-x64.msi `
     main.wxs
 cd ..\..\..
 ```
 
-The MSI is produced at `target\wix\GhostWire-0.1.1-x64.msi` (~3.6 MB).
+The MSI is produced at `target\wix\GhostWire-0.2.0-x64.msi` (~3.6 MB).
 
 For automated builds, every git tag matching `v*` triggers a GitHub
 Actions workflow that performs the same steps on a fresh
@@ -402,13 +422,19 @@ attacker can achieve.
 
 ### Cryptographic core
 
-- `SecretString` (from the [`secrecy`](https://crates.io/crates/secrecy)
+- `SecretBox<T>` (from the [`secrecy 0.10`](https://crates.io/crates/secrecy)
   crate) wraps both the decrypted config and the WireGuard private
   key; both are zeroized automatically when dropped.
 - The PIN is collected via password field in the GUI (or `rpassword`
   in the CLI), wrapped in `SecretString` from input to use, and sent
   over the named pipe to the service for the duration of one
   connection attempt only.
+- **Explicit drop ordering** in the IPC connection handler: the
+  decrypted plaintext and parsed config are processed inside an inner
+  scope that closes before the tunnel handle is stored or the response
+  is sent. This guarantees secrets are zeroized before any response
+  reaches the client, regardless of the surrounding control flow or
+  Rust edition (2021 vs 2024).
 - Touch and PIN policies are honored by the YubiKey itself — GhostWire
   cannot bypass them, only forward what the user provides.
 - A 64 KiB upper bound is enforced on decrypted plaintext to mitigate
@@ -483,6 +509,14 @@ cargo test -p wgyk-core -- --ignored
 
 CI runs only the non-hardware tests; nothing in this repository
 assumes a YubiKey is plugged into the build agent.
+
+The `ghostwire-installer` binary requires UAC elevation to run its
+test suite (it interacts with WiX/MSI tooling). To run the full
+workspace test suite, launch PowerShell as Administrator:
+
+```powershell
+cargo test --workspace
+```
 
 ## License
 
