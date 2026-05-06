@@ -12,20 +12,16 @@ updates:
       cargo-dependencies:
         patterns:
           - "*"
+        update-types:
+          - "patch"
+      cargo-dependencies-major:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "major"
     ignore:
-      # sha2 0.11 et hkdf 0.13 requièrent digest 0.11, mais le reste de
-      # notre stack crypto (age, yubikey, p256, hmac, chacha20poly1305)
-      # est encore sur digest 0.10. À débloquer quand yubikey aura migré
-      # — surveille https://github.com/iqlusioninc/yubikey-rs/releases
       - dependency-name: "sha2"
         versions: [">=0.11"]
       - dependency-name: "hkdf"
         versions: [">=0.13"]
-
-  - package-ecosystem: "github-actions"
-    directory: "/"
-    schedule:
-      interval: "monthly"
-    labels:
-      - "dependencies"
-      - "ci"
