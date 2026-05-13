@@ -15,6 +15,7 @@
   <a href="https://github.com/Shaneosaure/GhostWire/releases"><img src="https://img.shields.io/badge/platform-Windows%2010%2F11-blue" alt="Platform: Windows"></a>
   <a href="https://www.rust-lang.org/"><img src="https://img.shields.io/badge/rust-1.95%2B-orange?logo=rust" alt="Rust 1.95+"></a>
   <a href="https://blog.rust-lang.org/"><img src="https://img.shields.io/badge/edition-2024-orange" alt="Rust Edition 2024"></a>
+  <a href="https://deepwiki.com/Shaneosaure/GhostWire"><img src="https://deepwiki.com/badge.svg" alt="Ask DeepWiki"></a>
 </p>
 
 GhostWire is an open-source Windows VPN client that bridges three things
